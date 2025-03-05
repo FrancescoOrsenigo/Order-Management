@@ -1,0 +1,49 @@
+services:
+  
+  mariadb:
+    image: mariadb:11.4
+    container_name: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: ordermanagement
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    command: --bind-address=0.0.0.0
+    ports:
+      - "3306:3306"
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.13
+    container_name: meilisearch
+    environment:
+      MEILI_MASTER_KEY: "masterKey"
+    volumes:
+      - ./data.ms:/data.ms
+    ports:
+      - "7700:7700"
+
+  redis:
+      image: redis:7.2.4
+      container_name: redis
+      ports:
+        - "6379:6379"
+      environment:
+        REDIS_PORT: 6379
+        ALLOW_EMPTY_PASSWORD: yes
+  
+  ordermanager:
+    build: .
+    command: sh -c "sleep 10 && uvicorn main:app --reload --port=8000 --host=0.0.0.0"
+    environment:
+      DATABASE_URL: "mysql+pymysql://user:password@mariadb:3306/ordermanagement"
+      MEILISEARCH_URL: "http://meilisearch:7700"
+      MEILISEARCH_API_KEY: "masterKey"
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - mariadb
+      - meilisearch
+      - redis
+
